@@ -1,0 +1,166 @@
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\usepackage{algorithm,algorithmicx}
+\usepackage{amsfonts,amssymb,amsmath,amsthm}
+
+\newtheorem{theorem}{}[section]
+
+\title{Multi-Target Planar Shape Interpolation With Karcher Mean of Metrics}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    
+\end{abstract}
+
+Shape interpolation, Karcher mean, bounded distortion
+
+\section{Introduction}
+
+\section{Related Work}
+
+\section{The Problem}
+
+We first formalize the problem of multi-target planar shape interpolation. 
+Consider a source planar triangular mesh $S_0 = (V_0, E, F)$ and a set of $n$ target meshes $S_i = (V_i, E, F)$ for $i = 1, \dots, n$, all sharing the same connectivity (edges $E$ and faces $F$) and face orientation. 
+The embedding of each mesh is given by vertex positions $V_i \in \mathbb{R}^2$.
+
+A natural way to represent the deformation from the source to each target is through a piecewise-linear map $\phi_i: S_0 \to S_i$ defined on vertices as $\phi_i(V_0) = V_i$ and extended linearly over faces via barycentric coordinates. 
+On each face $f \in F$, the Jacobian matrix $J_{i,f} \in \mathbb{R}^{2 \times 2}$ of $\phi_i$ is constant and captures the local affine transformation.
+
+The \emph{pullback metric} $g_{i,f}$ induced by $\phi_i$ on face $f$ is defined as
+\begin{equation}
+    g_{i,f} = J_{i,f}^\top J_{i,f},
+\end{equation}
+which is a symmetric positive-definite (SPD) $2\times 2$ matrix. 
+This metric encodes how lengths and angles are distorted locally by the map. 
+For the identity map (i.e., the source itself), the pullback metric is simply the identity matrix $I$.
+
+From the eigenvalues $\lambda_{i,f,1} \geq \lambda_{i,f,2} > 0$ of $g_{i,f}$, we define two fundamental distortion measures:
+\begin{align}
+    K_{i,f} &= \sqrt{\frac{\lambda_{i,f,1}}{\lambda_{i,f,2}}}, \quad 
+    D_{i,f} = \sqrt{\lambda_{i,f,1} \cdot \lambda_{i,f,2}}
+\end{align}
+The \emph{conformal distortion} $K_{i,f}$ measures angular deviation from a conformal map ($K=1$ indicates no angular distortion), while the \emph{area distortion} $D_{i,f}$ measures local scaling of area ($D=1$ indicates area preservation). 
+Both quantities are defined per face.
+
+Given a set of nonnegative weights $w = (w_0, w_1, \dots, w_n)$ with $\sum_{i=0}^n w_i = 1$, where $w_0$ corresponds to the source and $w_i$ to the $i$-th target, our goal is to produce an interpolated mesh $S_w$ that naturally blends the input shapes while controlling both conformal and area distortions. 
+The core challenge is to define a meaningful blending of the pullback metrics $\{g_{i,f}\}$ that leads to a valid planar embedding with bounded distortion.
+
+\section{Method}
+
+Our goal is to interpolate between multiple planar shapes while maintaining bounded geometric distortion. 
+To achieve this, we propose a metric blending approach that generalizes existing single-target interpolation schemes to multiple targets. 
+We formulate the blending as a \emph{Karcher mean} problem on the Riemannian manifold of SPD matrices. 
+This choice naturally extends the desirable properties of single-target interpolation to the multi-target case while providing strong theoretical guarantees on distortion bounds.
+
+\subsection{Karcher Mean of Pullback Metrics}
+
+Given a set of SPD matrices $\{g_i\}_{i=0}^n$ corresponding to the pullback metrics of $n+1$ shapes (including the source $g_0 = I$), and a set of weights $w = (w_0, \dots, w_n)$ with $w_i \geq 0$ and $\sum_i w_i = 1$, we define the blended metric $g_w$ as the solution to the Karcher mean equation:
+
+\begin{equation}
+    \sum_{i=0}^n w_i \, \log\left( g_w^{-1/2} g_i g_w^{-1/2} \right) = 0,
+    \label{eq:karcher}
+\end{equation}
+
+This equation arises from minimizing the weighted sum of squared Riemannian distances:
+
+\begin{equation}
+    g_w = \arg\min_{g \succ 0} \sum_{i=0}^n w_i \, d_{\text{Riem}}^2(g, g_i),
+\end{equation}
+
+with $d_{\text{Riem}}(A, B) = \|\log(A^{-1/2} B A^{-1/2})\|_F$.
+
+The solution $g_w$ to \eqref{eq:karcher} exists and is unique for nonnegative weights, ensuring a well-defined blending operation. We denote this solution compactly as:
+
+\begin{equation}
+    g_w = G(w_0, \dots, w_n; g_0, \dots, g_n).
+\end{equation}
+
+For the special case of a single target ($n=1$), the Karcher mean  reduces to the familiar logarithmic blending, and we write:
+
+\[
+G(1-t, t; I, g_1) = g_1^t.
+\]
+
+This shows that our multi-target blending framework generalizes the single-target logarithmic blending, preserving its desirable distortion properties while extending to arbitrary numbers of input shapes.
+
+\subsection{Basic Properties of Karcher Mean Blending}
+
+The Karcher mean blending inherits several desirable properties from its variational formulation:
+
+\textbf{Lagrange property.} If $w$ is a vector with $w_i=1$, then $g_w = g_i$. 
+
+\textbf{Smoothness.} The mapping $w \mapsto g_w$ is smooth for $w_i > 0$, as the Karcher mean varies smoothly with weights on the SPD manifold.
+
+\textbf{Symmetry.} The Karcher mean is invariant under permutation of the inputs: if $\sigma$ is a permutation of $\{0,\dots,n\}$, then $G(w_0,\dots,w_n; g_0,\dots,g_n) = G(w_{\sigma(0)},\dots,w_{\sigma(n)}; g_{\sigma(0)},\dots,g_{\sigma(n)})$.
+
+These properties ensure that our interpolation scheme behaves intuitively and robustly under weight changes and input reordering.
+
+\subsection{Bounded Conformal Distortion}
+
+Let $K_i$ denote the conformal distortion associated with metric $g_i$, and $K_w$ the distortion of the blended metric $g_w$. We now prove that the Karcher mean blending yields a conformal distortion that is bounded by the geometric mean of the input distortions.
+
+\begin{theorem}[Conformal distortion bound]
+For any weights $w_i \geq 0$ with $\sum_i w_i = 1$, the conformal distortion $K_w$ of the Karcher mean $g_w$ satisfies
+\begin{equation}
+    K_w \leq \prod_{i=0}^n K_i^{w_i}.
+    \label{eq:conformal-bound}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Let $\lambda_{\max}(g)$ and $\lambda_{\min}(g)$ denote the largest and smallest eigenvalues of an SPD matrix $g$. 
+
+From the variational characterization of eigenvalues and the Karcher mean definition, we can derive:
+\begin{align}
+    \lambda_{\max}(g_w) &\leq \prod_{i=0}^n \lambda_{\max}(g_i)^{w_i}, \\
+    \lambda_{\min}(g_w) &\geq \prod_{i=0}^n \lambda_{\min}(g_i)^{w_i}.
+\end{align}
+Dividing these inequalities and taking square roots yields \eqref{eq:conformal-bound}.
+\end{proof}
+
+\subsection{Bounded Area Distortion}
+
+The area distortion $D$ is governed by the determinant of the metric, which exhibits a particularly elegant behavior under Karcher mean blending.
+
+\begin{theorem}[Area distortion product formula]
+The area distortion $D_w$ of the Karcher mean $g_w$ satisfies
+\begin{equation}
+    D_w = \prod_{i=0}^n D_i^{w_i}.
+    \label{eq:area-equality}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Taking the trace of both sides of the Karcher equation \eqref{eq:karcher} and using the identity $\operatorname{tr}(\log A) = \log\det A$ for SPD matrices, we obtain:
+\begin{align*}
+    0 &= \sum_{i=0}^n w_i \operatorname{tr}\left(\log\left(g_w^{-1/2} g_i g_w^{-1/2}\right)\right) \\
+      &= \sum_{i=0}^n w_i \log\det\left(g_w^{-1/2} g_i g_w^{-1/2}\right) \\
+      &= \sum_{i=0}^n w_i \left(\log\det g_i - \log\det g_w\right).
+\end{align*}
+Rearranging gives $\log\det g_w = \sum_i w_i \log\det g_i$, or equivalently,
+\[
+\det g_w = \prod_{i=0}^n (\det g_i)^{w_i}.
+\]
+Since $D = \sqrt{\det g}$, we obtain \eqref{eq:area-equality}.
+\end{proof}
+
+\section{Implementation}
+
+\subsection{Blending}
+
+\subsection{Realization}
+
+\section{Results}
+
+\section{Discussion and Conclusion}
+
+\section{Acknowledgments}
+
+\end{document}
+
